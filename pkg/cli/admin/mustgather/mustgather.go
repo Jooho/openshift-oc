@@ -360,18 +360,18 @@ func (o *MustGatherOptions) Run() error {
 	return errors.NewAggregate(errs)
 }
 
-func newPodOutLogger(out io.Writer, podName string) func(string, ...interface{}) {
+func NewPodOutLogger(out io.Writer, podName string) func(string, ...interface{}) {
 	writer := newPrefixWriter(out, fmt.Sprintf("[%s] OUT", podName))
 	return func(format string, a ...interface{}) {
 		fmt.Fprintf(writer, format+"\n", a...)
 	}
 }
 
-func (o *MustGatherOptions) log(format string, a ...interface{}) {
+func (o *MustGatherOptions) Log(format string, a ...interface{}) {
 	fmt.Fprintf(o.LogOut, format+"\n", a...)
 }
 
-func (o *MustGatherOptions) logTimestamp() error {
+func (o *MustGatherOptions) LogTimestamp() error {
 	f, err := os.OpenFile(path.Join(o.DestDir, "timestamp"), os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
 		return err
@@ -380,7 +380,7 @@ func (o *MustGatherOptions) logTimestamp() error {
 	return err
 }
 
-func (o *MustGatherOptions) copyFilesFromPod(pod *corev1.Pod) error {
+func (o *MustGatherOptions) CopyFilesFromPod(pod *corev1.Pod) error {
 	streams := o.IOStreams
 	streams.Out = newPrefixWriter(streams.Out, fmt.Sprintf("[%s] OUT", pod.Name))
 	destDir := path.Join(o.DestDir, regexp.MustCompile("[^A-Za-z0-9]+").ReplaceAllString(pod.Status.ContainerStatuses[0].ImageID, "-"))
@@ -401,7 +401,7 @@ func (o *MustGatherOptions) copyFilesFromPod(pod *corev1.Pod) error {
 	return rsyncOptions.RunRsync()
 }
 
-func (o *MustGatherOptions) getGatherContainerLogs(pod *corev1.Pod) error {
+func (o *MustGatherOptions) GetGatherContainerLogs(pod *corev1.Pod) error {
 	return (&logs.LogsOptions{
 		Namespace:   pod.Namespace,
 		ResourceArg: pod.Name,
@@ -417,7 +417,7 @@ func (o *MustGatherOptions) getGatherContainerLogs(pod *corev1.Pod) error {
 	}).RunLogs()
 }
 
-func newPrefixWriter(out io.Writer, prefix string) io.Writer {
+func NewPrefixWriter(out io.Writer, prefix string) io.Writer {
 	reader, writer := io.Pipe()
 	scanner := bufio.NewScanner(reader)
 	go func() {
@@ -428,7 +428,7 @@ func newPrefixWriter(out io.Writer, prefix string) io.Writer {
 	return writer
 }
 
-func (o *MustGatherOptions) waitForGatherToComplete(pod *corev1.Pod) error {
+func (o *MustGatherOptions) WaitForGatherToComplete(pod *corev1.Pod) error {
 	err := wait.PollImmediate(10*time.Second, time.Duration(o.Timeout)*time.Second, func() (bool, error) {
 		var err error
 		if pod, err = o.Client.CoreV1().Pods(pod.Namespace).Get(context.TODO(), pod.Name, metav1.GetOptions{}); err != nil {
@@ -465,7 +465,7 @@ func (o *MustGatherOptions) waitForGatherToComplete(pod *corev1.Pod) error {
 	return nil
 }
 
-func (o *MustGatherOptions) waitForGatherContainerRunning(pod *corev1.Pod) error {
+func (o *MustGatherOptions) WaitForGatherContainerRunning(pod *corev1.Pod) error {
 	return wait.PollImmediate(10*time.Second, time.Duration(o.Timeout)*time.Second, func() (bool, error) {
 		var err error
 		if pod, err = o.Client.CoreV1().Pods(pod.Namespace).Get(context.TODO(), pod.Name, metav1.GetOptions{}); err == nil {
